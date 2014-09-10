@@ -1,0 +1,26 @@
+{
+	"ImportPath": "github.com/andrew-d/imagehost",
+	"GoVersion": "go1.3.1",
+	"Deps": [
+		{
+			"ImportPath": "github.com/julienschmidt/httprouter",
+			"Rev": "7deadb6844d2c6ff1dfb812eaa439b87cdaedf20"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/goamz/aws",
+			"Rev": "7423bca18e4b1a3e91dff9f41b80c167f5609237"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/goamz/s3",
+			"Rev": "7423bca18e4b1a3e91dff9f41b80c167f5609237"
+		},
+		{
+			"ImportPath": "github.com/vaughan0/go-ini",
+			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v1",
+			"Rev": "fc7f19eff1782a0beae3065097c776183e7d01d0"
+		}
+	]
+}

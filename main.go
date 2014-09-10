@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,11 +27,14 @@ type Config struct {
 
 var (
 	flagConfigFile string
+	flagPort       int
 )
 
 func init() {
 	flag.StringVarP(&flagConfigFile, "config", "c", "",
 		"location of the config file")
+	flag.IntVarP(&flagPort, "port", "p", 8080,
+		"port to listen on")
 }
 
 type routeParams struct {
@@ -110,5 +114,7 @@ func main() {
 	router.GET("/", wrapRoute(Index, params))
 	router.POST("/upload", wrapRoute(Upload, params))
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	addr := fmt.Sprintf(":%d", flagPort)
+	log.Printf("Starting HTTP server on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, router))
 }

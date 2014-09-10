@@ -52,6 +52,14 @@ func Upload(w http.ResponseWriter, r *http.Request, p routeParams) {
 			printError(w, errorInfo{msg: "error saving to archive bucket", err: err})
 			return
 		}
+
+		// We need to seek back to the beginning of the file, since the above reads
+		// until EOF
+		_, err = f.Seek(0, 0)
+		if err != nil {
+			printError(w, errorInfo{msg: "error saving to archive bucket", err: err})
+			return
+		}
 	}
 
 	// TODO: sanitize the image

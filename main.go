@@ -14,14 +14,14 @@ import (
 )
 
 type Config struct {
-	PublicBucket  string
-	ArchiveBucket string
+	PublicBucket  string `yaml:"public_bucket"`
+	ArchiveBucket string `yaml:"archive_bucket"`
 
 	Auth struct {
-		AccessKey string
-		SecretKey string
-		Token     string
-	}
+		AccessKey string `yaml:"access_key"`
+		SecretKey string `yaml:"secret_key"`
+		Token     string `yaml:"token"`
+	} `yaml:"auth"`
 }
 
 var (

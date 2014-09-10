@@ -44,10 +44,17 @@ func Upload(w http.ResponseWriter, r *http.Request, p routeParams) {
 		return
 	}
 
+	// Try decoding the input as an image.
+	contentType, ok := checkImage(f)
+	if !ok {
+		printError(w, errorInfo{msg: "input does not appear to be an image", code: 400})
+		return
+	}
+
 	// If there's an archive bucket, save there.
 	if len(p.config.ArchiveBucket) > 0 {
 		b := p.s3.Bucket(p.config.ArchiveBucket)
-		err = b.PutReader(file.Filename, f, size, "image/png", s3.BucketOwnerFull)
+		err = b.PutReader(file.Filename, f, size, contentType, s3.BucketOwnerFull)
 		if err != nil {
 			printError(w, errorInfo{msg: "error saving to archive bucket", err: err})
 			return
@@ -62,13 +69,20 @@ func Upload(w http.ResponseWriter, r *http.Request, p routeParams) {
 		}
 	}
 
-	// TODO: sanitize the image
-	// TODO: generate a random name
-	publicName := file.Filename
+	// Sanitize the image.
+	// TODO: add support for animated GIFs
+	sanitized, err := SanitizeImageFrom(f)
+	if err != nil {
+		printError(w, errorInfo{msg: "error sanitizing image", err: err})
+		return
+	}
+
+	// Generate a random name for this image.
+	publicName := randString(10)
 
 	// Save to the public bucket.
 	b := p.s3.Bucket(p.config.PublicBucket)
-	err = b.PutReader(publicName, f, size, "image/png", s3.PublicRead)
+	err = b.PutReader(publicName, sanitized, size, contentType, s3.PublicRead)
 	if err != nil {
 		printError(w, errorInfo{msg: "error saving to public bucket", err: err})
 		return

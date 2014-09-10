@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/mitchellh/goamz/s3"
 )
@@ -14,6 +17,12 @@ func Index(w http.ResponseWriter, r *http.Request, p routeParams) {
 }
 
 func Upload(w http.ResponseWriter, r *http.Request, p routeParams) {
+	if !doBasicAuth(w, r, p) {
+		w.Header().Set("WWW-Authenticate", "Basic realm=\"user\"")
+		printError(w, errorInfo{msg: "unauthorized", code: 403})
+		return
+	}
+
 	// Store up to 5 MiB in memory
 	err := r.ParseMultipartForm(5 * 1024 * 1024)
 	if err != nil {
@@ -109,4 +118,51 @@ func getSize(s io.Seeker) (size int64, err error) {
 
 	_, err = s.Seek(0, 0)
 	return
+}
+
+// If this returns 'true', then the user is authorized.
+func doBasicAuth(w http.ResponseWriter, r *http.Request, p routeParams) bool {
+	authorizationArray := r.Header["Authorization"]
+
+	if len(authorizationArray) > 0 {
+		authorization := strings.TrimSpace(authorizationArray[0])
+		credentials := strings.Split(authorization, " ")
+
+		if len(credentials) != 2 || credentials[0] != "Basic" {
+			return false
+		}
+
+		authStr, err := base64.StdEncoding.DecodeString(credentials[1])
+		if err != nil {
+			return false
+		}
+
+		authParts := strings.Split(string(authStr), ":")
+		if len(authParts) != 2 {
+			return false
+		}
+
+		equal := 0
+		equal += stringsEqSecure(authParts[0], p.config.Auth.Username)
+		equal += stringsEqSecure(authParts[1], p.config.Auth.Password)
+		if equal == 2 {
+			return true
+		} else {
+			return false
+		}
+	} else {
+		return false
+	}
+}
+
+// Returns 1 if strings are equal, 0 otherwise.
+func stringsEqSecure(x, y string) int {
+	if len(x) != len(y) {
+		return 0
+	}
+
+	b1 := []byte(x)
+	b2 := []byte(y)
+
+	return subtle.ConstantTimeCompare(b1, b2)
 }

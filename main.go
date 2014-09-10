@@ -18,10 +18,15 @@ type Config struct {
 	PublicBucket  string `yaml:"public_bucket"`
 	ArchiveBucket string `yaml:"archive_bucket"`
 
-	Auth struct {
+	AWSAuth struct {
 		AccessKey string `yaml:"access_key"`
 		SecretKey string `yaml:"secret_key"`
 		Token     string `yaml:"token"`
+	} `yaml:"aws"`
+
+	Auth struct {
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
 	} `yaml:"auth"`
 }
 
@@ -90,16 +95,16 @@ func main() {
 		log.Printf("No public bucket given")
 		return
 	}
-	if len(config.Auth.AccessKey) == 0 || len(config.Auth.SecretKey) == 0 {
+	if len(config.AWSAuth.AccessKey) == 0 || len(config.AWSAuth.SecretKey) == 0 {
 		log.Printf("AWS configuration not given")
 		return
 	}
 
 	// Connect to AWS
 	auth := aws.Auth{
-		AccessKey: config.Auth.AccessKey,
-		SecretKey: config.Auth.SecretKey,
-		Token:     config.Auth.Token,
+		AccessKey: config.AWSAuth.AccessKey,
+		SecretKey: config.AWSAuth.SecretKey,
+		Token:     config.AWSAuth.Token,
 	}
 	s3 := s3.New(auth, aws.USWest) // TODO: make the region configurable
 

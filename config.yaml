@@ -1,6 +1,10 @@
 public_bucket: mybucket
 archive_bucket: s00persekret
-auth:
+aws:
     access_key: keyhere
     secret_key: keyhere
     # token: token      # Optional
+
+auth:
+    username: admin
+    password: verysecure

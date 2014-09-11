@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"log"
 
@@ -53,7 +54,7 @@ func Upload(c *gin.Context) {
 	// Try decoding the input as an image.
 	contentType, ok := checkImage(f)
 	if !ok {
-		c.Error(nil, "input does not appear to be an image")
+		c.Error(errors.New("not an image"), "input does not appear to be an image")
 		c.Abort(400)
 		return
 	}

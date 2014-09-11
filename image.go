@@ -40,7 +40,7 @@ func SanitizeImageFrom(r io.Reader) (io.ReadSeeker, int64, error) {
 	case "gif":
 		err = gif.Encode(&buf, newImg, &gif.Options{NumColors: 256})
 	case "jpeg":
-		err = jpeg.Encode(&buf, newImg, &jpeg.Options{Quality: 80})
+		err = jpeg.Encode(&buf, newImg, &jpeg.Options{Quality: 100})
 	case "png":
 		err = png.Encode(&buf, newImg)
 	default:

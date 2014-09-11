@@ -22,10 +22,10 @@ func checkImage(r io.ReadSeeker) (string, bool) {
 	return "image/" + fmt, true
 }
 
-func SanitizeImageFrom(r io.Reader) (io.ReadSeeker, error) {
+func SanitizeImageFrom(r io.Reader) (io.ReadSeeker, int64, error) {
 	img, format, err := image.Decode(r)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	log.Printf("Sanitizing image of format: %s", format)
@@ -41,16 +41,16 @@ func SanitizeImageFrom(r io.Reader) (io.ReadSeeker, error) {
 	case "png":
 		err = png.Encode(&buf, newImg)
 	default:
-		return nil, fmt.Errorf("unknown image format: %s", format)
+		return nil, 0, fmt.Errorf("unknown image format: %s", format)
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Convert to a byte slice, and then to our ReadSeeker.
 	bSlice := buf.Bytes()
-	return bytes.NewReader(bSlice), nil
+	return bytes.NewReader(bSlice), int64(len(bSlice)), nil
 }
 
 func CloneToRGBA(src image.Image) draw.Image {

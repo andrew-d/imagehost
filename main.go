@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
 	flag "github.com/ogier/pflag"
@@ -40,27 +39,6 @@ func init() {
 		"location of the config file")
 	flag.IntVarP(&flagPort, "port", "p", 8080,
 		"port to listen on")
-}
-
-type routeParams struct {
-	config *Config
-	s3     *s3.S3
-	params httprouter.Params
-}
-
-// Pseudo-middleware
-type HandlerFunc func(w http.ResponseWriter, r *http.Request, p routeParams)
-
-func wrapRoute(h HandlerFunc, template routeParams) httprouter.Handle {
-	return httprouter.Handle(func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		params := routeParams{
-			config: template.config,
-			s3:     template.s3,
-			params: p,
-		}
-
-		h(w, r, params)
-	})
 }
 
 func main() {
@@ -106,20 +84,64 @@ func main() {
 		SecretKey: config.AWSAuth.SecretKey,
 		Token:     config.AWSAuth.Token,
 	}
-	s3 := s3.New(auth, aws.USWest) // TODO: make the region configurable
+	client := s3.New(auth, aws.USWest) // TODO: make the region configurable
 
-	// "Middleware"
-	params := routeParams{
-		config: &config,
-		s3:     s3,
+	// Authorized accounts
+	accounts := gin.Accounts{}
+	accounts[config.Auth.Username] = config.Auth.Password
+
+	r := gin.Default()
+
+	// Inject our config and S3 instance into each request.
+	r.Use(func(c *gin.Context) {
+		c.Set("client", client)
+		c.Set("config", &config)
+		c.Next()
+	})
+
+	// Handle errors by writing them as JSON.
+	r.Use(func(c *gin.Context) {
+		c.Next()
+
+		// Exit if there's no errors.
+		if len(c.Errors) == 0 {
+			return
+		}
+
+		type ErrorDesc struct {
+			Error string      `json:"error,omitempty"`
+			Meta  interface{} `json:"message,omitempty"`
+		}
+
+		errors := []ErrorDesc{}
+		for _, err := range c.Errors {
+			errors = append(errors, ErrorDesc{
+				Error: err.Err,
+				Meta:  err.Meta,
+			})
+		}
+
+		resp := map[string]interface{}{
+			"status": "error",
+			"errors": errors,
+		}
+
+		status := c.Writer.Status()
+		if status == 0 {
+			status = 500
+		}
+
+		c.JSON(status, resp)
+	})
+
+	r.GET("/", Index)
+
+	authorized := r.Group("/", gin.BasicAuth(accounts))
+	{
+		authorized.POST("/upload", Upload)
 	}
-
-	// Set up routes
-	router := httprouter.New()
-	router.GET("/", wrapRoute(Index, params))
-	router.POST("/upload", wrapRoute(Upload, params))
 
 	addr := fmt.Sprintf(":%d", flagPort)
 	log.Printf("Starting HTTP server on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, router))
+	r.Run(":8080")
 }

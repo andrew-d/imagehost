@@ -52,12 +52,13 @@ func Upload(c *gin.Context) {
 	log.Printf("size of file: %d", size)
 
 	// Try decoding the input as an image.
-	contentType, ok := checkImage(f)
+	imageFormat, ok := checkImage(f)
 	if !ok {
 		c.Error(errors.New("not an image"), "input does not appear to be an image")
 		c.Abort(400)
 		return
 	}
+	contentType := "image/" + imageFormat
 
 	// If there's an archive bucket, save there.
 	if len(config.ArchiveBucket) > 0 {
@@ -86,7 +87,7 @@ func Upload(c *gin.Context) {
 	}
 
 	// Generate a random name for this image.
-	publicName := randString(10)
+	publicName := randString(10) + "." + imageFormat
 
 	// Save to the public bucket.
 	b := client.Bucket(config.PublicBucket)

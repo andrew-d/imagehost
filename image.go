@@ -19,7 +19,7 @@ func checkImage(r io.ReadSeeker) (string, bool) {
 		return "", false
 	}
 
-	return "image/" + fmt, true
+	return fmt, true
 }
 
 func SanitizeImageFrom(r io.Reader) (io.ReadSeeker, int64, error) {

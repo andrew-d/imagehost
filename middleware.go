@@ -7,12 +7,18 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 )
 
-var idPrefix string
-var reqId uint64
+var (
+	idPrefix string
+	reqId    uint64
+
+	log = logrus.New()
+)
 
 func init() {
 	// Init. request ID stuff.
@@ -33,7 +39,7 @@ func init() {
 }
 
 // Generate a unique request ID for each request.  Borrowed liberally from Goji.
-func RequestIDMiddleware(c *gin.Context) {
+func RequestIdMiddleware(c *gin.Context) {
 	myId := atomic.AddUint64(&reqId, 1)
 	c.Set("requestId", fmt.Sprintf("%s-%06d", idPrefix, myId))
 	c.Next()
@@ -71,4 +77,29 @@ func ErrorPrintMiddleware(c *gin.Context) {
 	}
 
 	c.JSON(status, resp)
+}
+
+func LogrusMiddleware(c *gin.Context) {
+	start := time.Now()
+	id := c.MustGet("requestId").(string)
+
+	log.WithFields(logrus.Fields{
+		"requestId": id,
+		"uri":       c.Request.RequestURI,
+		"method":    c.Request.Method,
+		"remote":    c.Request.RemoteAddr,
+	}).Info("request_start")
+
+	c.Next()
+
+	latency := float64(time.Since(start)) / float64(time.Millisecond)
+
+	log.WithFields(logrus.Fields{
+		"requestId": id,
+		"uri":       c.Request.RequestURI,
+		"method":    c.Request.Method,
+		"remote":    c.Request.RemoteAddr,
+		"status":    c.Writer.Status(),
+		"latency":   latency,
+	}).Info("request_finished")
 }

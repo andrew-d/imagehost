@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -43,6 +42,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+	gin.SetMode(gin.ReleaseMode)
 
 	if len(flagConfigFile) == 0 {
 		log.Printf("No config file specified")
@@ -90,8 +90,9 @@ func main() {
 	accounts := gin.Accounts{}
 	accounts[config.Auth.Username] = config.Auth.Password
 
-	r := gin.Default()
-	r.Use(RequestIDMiddlware)
+	r := gin.New()
+	r.Use(RequestIdMiddleware)
+	r.Use(LogrusMiddleware)
 
 	// Inject our config and S3 instance into each request.
 	r.Use(func(c *gin.Context) {

@@ -9,7 +9,8 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"log"
+
+	"github.com/Sirupsen/logrus"
 )
 
 func checkImage(r io.ReadSeeker) (string, bool) {
@@ -28,7 +29,9 @@ func SanitizeImageFrom(r io.Reader) (io.ReadSeeker, int64, error) {
 		return nil, 0, err
 	}
 
-	log.Printf("Sanitizing image of format: %s", format)
+	log.WithFields(logrus.Fields{
+		"format": format,
+	}).Debug("Sanitizing image")
 	newImg := CloneToRGBA(img)
 
 	// Encode as the original type into a buffer

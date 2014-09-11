@@ -3,8 +3,8 @@ package main
 import (
 	"errors"
 	"io"
-	"log"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/goamz/s3"
 )
@@ -33,8 +33,6 @@ func Upload(c *gin.Context) {
 	}
 	file := files[0]
 
-	log.Printf("Got upload with name: %s", file.Filename)
-
 	f, err := file.Open()
 	if err != nil {
 		c.Error(err, "error opening multipart file")
@@ -49,8 +47,6 @@ func Upload(c *gin.Context) {
 		return
 	}
 
-	log.Printf("size of file: %d", size)
-
 	// Try decoding the input as an image.
 	imageFormat, ok := checkImage(f)
 	if !ok {
@@ -59,6 +55,12 @@ func Upload(c *gin.Context) {
 		return
 	}
 	contentType := "image/" + imageFormat
+
+	log.WithFields(logrus.Fields{
+		"name":   file.Filename,
+		"size":   size,
+		"format": imageFormat,
+	}).Info("got upload")
 
 	// If there's an archive bucket, save there.
 	if len(config.ArchiveBucket) > 0 {
@@ -88,6 +90,12 @@ func Upload(c *gin.Context) {
 
 	// Generate a random name for this image.
 	publicName := randString(10) + "." + imageFormat
+
+	log.WithFields(logrus.Fields{
+		"name":           file.Filename,
+		"sanitized_size": size,
+		"public_name":    publicName,
+	}).Info("image sanitized")
 
 	// Save to the public bucket.
 	b := client.Bucket(config.PublicBucket)

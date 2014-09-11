@@ -3,6 +3,11 @@
 	"GoVersion": "go1.3.1",
 	"Deps": [
 		{
+			"ImportPath": "github.com/gin-gonic/gin",
+			"Comment": "v0.4-8-g3b079bb",
+			"Rev": "3b079bb6f79ae501e73a5401c41b589f6616b61e"
+		},
+		{
 			"ImportPath": "github.com/julienschmidt/httprouter",
 			"Rev": "7deadb6844d2c6ff1dfb812eaa439b87cdaedf20"
 		},
@@ -13,6 +18,10 @@
 		{
 			"ImportPath": "github.com/mitchellh/goamz/s3",
 			"Rev": "7423bca18e4b1a3e91dff9f41b80c167f5609237"
+		},
+		{
+			"ImportPath": "github.com/ogier/pflag",
+			"Rev": "e4f7d00f344b0954fa3791a8527d10ba7334eceb"
 		},
 		{
 			"ImportPath": "github.com/vaughan0/go-ini",

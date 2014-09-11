@@ -91,6 +91,7 @@ func main() {
 	accounts[config.Auth.Username] = config.Auth.Password
 
 	r := gin.Default()
+	r.Use(RequestIDMiddlware)
 
 	// Inject our config and S3 instance into each request.
 	r.Use(func(c *gin.Context) {
@@ -100,39 +101,7 @@ func main() {
 	})
 
 	// Handle errors by writing them as JSON.
-	r.Use(func(c *gin.Context) {
-		c.Next()
-
-		// Exit if there's no errors.
-		if len(c.Errors) == 0 {
-			return
-		}
-
-		type ErrorDesc struct {
-			Error string      `json:"error,omitempty"`
-			Meta  interface{} `json:"message,omitempty"`
-		}
-
-		errors := []ErrorDesc{}
-		for _, err := range c.Errors {
-			errors = append(errors, ErrorDesc{
-				Error: err.Err,
-				Meta:  err.Meta,
-			})
-		}
-
-		resp := map[string]interface{}{
-			"status": "error",
-			"errors": errors,
-		}
-
-		status := c.Writer.Status()
-		if status == 0 {
-			status = 500
-		}
-
-		c.JSON(status, resp)
-	})
+	r.Use(ErrorPrintMiddleware)
 
 	r.GET("/", Index)
 

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"net/http"
+	"io"
 )
 
 type errorInfo struct {
@@ -48,4 +49,20 @@ func randString(n int) string {
 		bytes[i] = alphanum[b%byte(len(alphanum))]
 	}
 	return string(bytes)
+}
+
+// Get the size of something that can be Seek()'d.  Resets the position back to
+// the start of the Seeker afterwords.
+func getSize(s io.Seeker) (size int64, err error) {
+	if _, err = s.Seek(0, 0); err != nil {
+		return
+	}
+
+	// 2 == from the end of the file
+	if size, err = s.Seek(0, 2); err != nil {
+		return
+	}
+
+	_, err = s.Seek(0, 0)
+	return
 }

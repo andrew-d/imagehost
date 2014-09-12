@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
-	"io"
+	"fmt"
+	"mime/multipart"
+	"net/http"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
@@ -25,27 +27,13 @@ func Upload(c *gin.Context) {
 		return
 	}
 
-	files, found := c.Request.MultipartForm.File["upload"]
-	if !found || len(files) < 1 {
-		c.Error(err, "'upload' not found")
+	f, filename, size, err := extractFile(c.Request, "upload")
+	if err != nil {
+		c.Error(err, "error extracting uploaded file")
 		c.Abort(400)
 		return
 	}
-	file := files[0]
-
-	f, err := file.Open()
-	if err != nil {
-		c.Error(err, "error opening multipart file")
-		return
-	}
 	defer f.Close()
-
-	// Find the size of the file.
-	size, err := getSize(f)
-	if err != nil {
-		c.Error(err, "error finding size of file")
-		return
-	}
 
 	// Try decoding the input as an image.
 	imageFormat, ok := checkImage(f)
@@ -57,7 +45,7 @@ func Upload(c *gin.Context) {
 	contentType := "image/" + imageFormat
 
 	log.WithFields(logrus.Fields{
-		"name":   file.Filename,
+		"name":   filename,
 		"size":   size,
 		"format": imageFormat,
 	}).Info("got upload")
@@ -65,7 +53,7 @@ func Upload(c *gin.Context) {
 	// If there's an archive bucket, save there.
 	if len(config.ArchiveBucket) > 0 {
 		b := client.Bucket(config.ArchiveBucket)
-		err = b.PutReader(file.Filename, f, size, contentType, s3.BucketOwnerFull)
+		err = b.PutReader(filename, f, size, contentType, s3.BucketOwnerFull)
 		if err != nil {
 			c.Error(err, "error saving to archive bucket")
 			return
@@ -92,7 +80,7 @@ func Upload(c *gin.Context) {
 	publicName := randString(10) + "." + imageFormat
 
 	log.WithFields(logrus.Fields{
-		"name":           file.Filename,
+		"name":           filename,
 		"sanitized_size": size,
 		"public_name":    publicName,
 	}).Info("image sanitized")
@@ -114,16 +102,24 @@ func Upload(c *gin.Context) {
 	})
 }
 
-func getSize(s io.Seeker) (size int64, err error) {
-	if _, err = s.Seek(0, 0); err != nil {
-		return
+// Extracts a file from a HTTP request.  Returns the file and its size.
+func extractFile(r *http.Request, name string) (multipart.File, string, int64, error) {
+	files, found := r.MultipartForm.File[name]
+	if !found || len(files) < 1 {
+		return nil, "", 0, fmt.Errorf("'%s' not found", name)
+	}
+	file := files[0]
+
+	f, err := file.Open()
+	if err != nil {
+		return nil, "", 0, errors.New("could not open multipart file")
 	}
 
-	// 2 == from the end of the file
-	if size, err = s.Seek(0, 2); err != nil {
-		return
+	// Find the size of the file.
+	size, err := getSize(f)
+	if err != nil {
+		return nil, "", 0, errors.New("could not find size of file")
 	}
 
-	_, err = s.Seek(0, 0)
-	return
+	return f, file.Filename, size, nil
 }

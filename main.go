@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
@@ -40,41 +41,61 @@ func init() {
 		"port to listen on")
 }
 
-func main() {
-	flag.Parse()
-	gin.SetMode(gin.ReleaseMode)
-
+func loadConfig(out *Config) error {
 	if len(flagConfigFile) == 0 {
-		log.Printf("No config file specified")
-		return
+		return fmt.Errorf("No config file specified")
 	}
 
 	f, err := os.Open(flagConfigFile)
 	if err != nil {
-		log.Printf("Error opening config file: %s", err)
-		return
+		return fmt.Errorf("Error opening config file: %s", err)
 	}
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
-		log.Printf("Error reading config: %s", err)
-		return
+		return fmt.Errorf("Error reading config: %s", err)
 	}
 
-	var config Config
-	err = yaml.Unmarshal(data, &config)
+	err = yaml.Unmarshal(data, out)
 	if err != nil {
-		log.Printf("Error decoding config: %s", err)
-		return
+		return fmt.Errorf("Error decoding config: %s", err)
 	}
 
-	// Validate config
+	return nil
+}
+
+func validateConfig(config *Config) error {
 	if len(config.PublicBucket) == 0 {
-		log.Printf("No public bucket given")
-		return
+		return fmt.Errorf("No public bucket given")
 	}
 	if len(config.AWSAuth.AccessKey) == 0 || len(config.AWSAuth.SecretKey) == 0 {
-		log.Printf("AWS configuration not given")
+		return fmt.Errorf("AWS configuration not given")
+	}
+
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	gin.SetMode(gin.ReleaseMode)
+
+	var config Config
+
+	err := loadConfig(&config)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"err":            err,
+			"flagConfigFile": flagConfigFile,
+		}).Error("Error loading config")
+		return
+	}
+
+	err = validateConfig(&config)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"err":            err,
+			"flagConfigFile": flagConfigFile,
+		}).Error("Error validating config")
 		return
 	}
 
@@ -104,6 +125,7 @@ func main() {
 	// Handle errors by writing them as JSON.
 	r.Use(ErrorPrintMiddleware)
 
+	// Set up actual routes.
 	r.GET("/", Index)
 
 	authorized := r.Group("/", gin.BasicAuth(accounts))
@@ -111,6 +133,7 @@ func main() {
 		authorized.POST("/upload", Upload)
 	}
 
+	// Good to go!
 	addr := fmt.Sprintf(":%d", flagPort)
 	log.Printf("Starting HTTP server on %s", addr)
 	r.Run(":8080")

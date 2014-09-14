@@ -21,6 +21,7 @@ type Config struct {
 		AccessKey string `yaml:"access_key"`
 		SecretKey string `yaml:"secret_key"`
 		Token     string `yaml:"token"`
+		Region    string `yaml:"region"`
 	} `yaml:"aws"`
 
 	Auth struct {
@@ -71,6 +72,14 @@ func validateConfig(config *Config) error {
 	if len(config.AWSAuth.AccessKey) == 0 || len(config.AWSAuth.SecretKey) == 0 {
 		return fmt.Errorf("AWS configuration not given")
 	}
+	if len(config.AWSAuth.Region) > 0 {
+		_, ok := aws.Regions[config.AWSAuth.Region]
+		if !ok {
+			return fmt.Errorf("AWS region '%s' not valid", config.AWSAuth.Region)
+		}
+	} else {
+		config.AWSAuth.Region = "us-west-1"
+	}
 
 	return nil
 }
@@ -105,7 +114,7 @@ func main() {
 		SecretKey: config.AWSAuth.SecretKey,
 		Token:     config.AWSAuth.Token,
 	}
-	client := s3.New(auth, aws.USWest) // TODO: make the region configurable
+	client := s3.New(auth, aws.Regions[config.AWSAuth.Region])
 
 	// Authorized accounts
 	accounts := gin.Accounts{}

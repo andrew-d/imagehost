@@ -59,6 +59,11 @@ func Upload(c *gin.Context) {
 			return
 		}
 
+		log.WithFields(logrus.Fields{
+			"name":        filename,
+			"archive_url": b.URL(filename),
+		}).Info("uploaded archive image")
+
 		// We need to seek back to the beginning of the file, since the above reads
 		// until EOF
 		_, err = f.Seek(0, 0)
@@ -95,6 +100,11 @@ func Upload(c *gin.Context) {
 
 	// Get the URL of the uploaded file and return it.
 	publicURL := b.URL(publicName)
+
+	log.WithFields(logrus.Fields{
+		"name":       filename,
+		"public_url": publicURL,
+	}).Info("uploaded public image")
 
 	c.JSON(200, map[string]interface{}{
 		"status":     "ok",

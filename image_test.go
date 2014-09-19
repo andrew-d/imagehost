@@ -36,7 +36,7 @@ func TestImageOrientation(t *testing.T) {
 		newImg, err = fixOrientation(newImg, orientation, ex.Tiff.Order)
 		assert.NoError(t, err)
 
-		outFile, err := os.Create(path.Join("exif-orientation-processed", "processed-" + fname))
+		outFile, err := os.Create(path.Join("exif-orientation-processed", "processed-"+fname))
 		assert.NoError(t, err)
 
 		err = jpeg.Encode(outFile, newImg, &jpeg.Options{Quality: 100})

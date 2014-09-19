@@ -35,18 +35,20 @@ func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
 
 	var orientation *tiff.Tag
 
-	ex, err := parseExif(r)
-	if err == nil {
-		orientation, err = ex.Get(exif.Orientation)
-		if err != nil && !exif.IsTagNotPresentError(err) {
+	if format == "jpeg" {
+		ex, err := parseExif(r)
+		if err == nil {
+			orientation, err = ex.Get(exif.Orientation)
+			if err != nil && !exif.IsTagNotPresentError(err) {
+				log.WithFields(logrus.Fields{
+					"error": "err",
+				}).Warn("Could not get Orientation tag")
+			}
+		} else {
 			log.WithFields(logrus.Fields{
-				"error": "err",
-			}).Warn("Could not get Orientation tag")
+				"error": err,
+			}).Warn("Could not parse EXIF data from image")
 		}
-	} else {
-		log.WithFields(logrus.Fields{
-			"error": err,
-		}).Warn("Could not parse EXIF data from image")
 	}
 
 	log.WithFields(logrus.Fields{

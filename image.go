@@ -34,9 +34,10 @@ func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
 	}
 
 	var orientation *tiff.Tag
+	var ex *exif.Exif
 
 	if format == "jpeg" {
-		ex, err := parseExif(r)
+		ex, err = parseExif(r)
 		if err == nil {
 			orientation, err = ex.Get(exif.Orientation)
 			if err != nil && !exif.IsTagNotPresentError(err) {

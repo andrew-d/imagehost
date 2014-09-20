@@ -1,10 +1,26 @@
-public_bucket: mybucket
+# The name of the S3 bucket to archive to.  "Archiving" involves sending a
+# copy of the image uploaded directly to the bucket, before any processing or
+# resizing is performed.  The name of the file in the archive bucket will be
+# the same as the filename of the uploaded file.
+# This value is optional.
 archive_bucket: s00persekret
+
+# The public bucket to upload to.  A random ID is generated, and then the
+# sanitized image is uploaded to this bucket.  The URL of the resulting file
+# is then returned to the client.
+# This value is required.
+public_bucket: mybucket
+
+# Authentication and configuration for AWS.
+# 'access_key' and 'secret_key' are required.
 aws:
     access_key: keyhere
     secret_key: keyhere
-    # token: token      # Optional
+    token: token            # Optional
+    region: sa-east-1       # If not given, defaults to "us-west-1"
 
+# Authentication to use.  These values are used to perform HTTP Basic
+# Authentication, preventing unauthorized clients from uploading files.
 auth:
     username: admin
     password: verysecure

@@ -1,36 +1,78 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/goamz/s3"
+	"github.com/zenazn/goji/web"
 )
 
-func Index(c *gin.Context) {
-	c.String(200, "This is the main page")
+var (
+	badJson = []byte(`{"status":"error","error":"error marshalling to json",` +
+		`"meta":"internal error while marshalling to json"}`)
+)
+
+func renderJSON(w http.ResponseWriter, code int, data interface{}) {
+	var result []byte
+	var err error
+
+	result, err = json.Marshal(data)
+	if err != nil {
+		log.WithField("err", err).Errorf("Error marshalling to JSON")
+		result = badJson
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	_, err = w.Write(result)
+
+	// Too late to do anything else, since we've already written the HTTP headers.
+	if err != nil {
+		log.WithField("err", err).Errorf("Error writing request")
+	}
 }
 
-func Upload(c *gin.Context) {
-	client := c.MustGet("client").(*s3.S3)
-	config := c.MustGet("config").(*Config)
+func renderError(w http.ResponseWriter, code int, err string, meta interface{}) {
+	log.WithFields(logrus.Fields{
+		"code":  code,
+		"error": err,
+		"meta":  meta,
+	}).Errorf("Error occured while processing request")
+
+	msg := map[string]interface{}{
+		"status": "error",
+		"error":  err,
+	}
+	if meta != nil {
+		msg["meta"] = meta
+	}
+
+	renderJSON(w, code, msg)
+}
+
+func Index(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("This is the main page"))
+}
+
+func Upload(c web.C, w http.ResponseWriter, r *http.Request) {
+	client := c.Env["client"].(*s3.S3)
+	config := c.Env["config"].(*Config)
 
 	// Store up to 5 MiB in memory
-	err := c.Request.ParseMultipartForm(5 * 1024 * 1024)
+	err := r.ParseMultipartForm(5 * 1024 * 1024)
 	if err != nil {
-		c.Error(err, "error parsing request form")
-		c.Abort(400)
+		renderError(w, http.StatusBadRequest, err.Error(), "error parsing request form")
 		return
 	}
 
-	f, filename, size, err := extractFile(c.Request, "upload")
+	f, filename, size, err := extractFile(r, "upload")
 	if err != nil {
-		c.Error(err, "error extracting uploaded file")
-		c.Abort(400)
+		renderError(w, http.StatusBadRequest, err.Error(), "error extracting uploaded file")
 		return
 	}
 	defer f.Close()
@@ -38,8 +80,7 @@ func Upload(c *gin.Context) {
 	// Try decoding the input as an image.
 	imageFormat, ok := checkImage(f)
 	if !ok {
-		c.Error(errors.New("not an image"), "input does not appear to be an image")
-		c.Abort(400)
+		renderError(w, http.StatusBadRequest, "not an image", "input does not appear to be an image")
 		return
 	}
 	contentType := "image/" + imageFormat
@@ -55,7 +96,7 @@ func Upload(c *gin.Context) {
 		b := client.Bucket(config.ArchiveBucket)
 		err = b.PutReader(filename, f, size, contentType, s3.BucketOwnerFull)
 		if err != nil {
-			c.Error(err, "error saving to archive bucket")
+			renderError(w, http.StatusInternalServerError, err.Error(), "error saving to archive bucket")
 			return
 		}
 
@@ -68,7 +109,7 @@ func Upload(c *gin.Context) {
 		// until EOF
 		_, err = f.Seek(0, 0)
 		if err != nil {
-			c.Error(err, "error saving to archive bucket")
+			renderError(w, http.StatusInternalServerError, err.Error(), "error saving to archive bucket")
 			return
 		}
 	}
@@ -77,7 +118,7 @@ func Upload(c *gin.Context) {
 	// TODO: add support for animated GIFs
 	sanitized, size, err := SanitizeImageFrom(f)
 	if err != nil {
-		c.Error(err, "error sanitizing image")
+		renderError(w, http.StatusInternalServerError, err.Error(), "error sanitizing image")
 		return
 	}
 
@@ -94,7 +135,7 @@ func Upload(c *gin.Context) {
 	b := client.Bucket(config.PublicBucket)
 	err = b.PutReader(publicName, sanitized, size, contentType, s3.PublicRead)
 	if err != nil {
-		c.Error(err, "error saving to public bucket")
+		renderError(w, http.StatusInternalServerError, err.Error(), "error saving to public bucket")
 		return
 	}
 
@@ -106,7 +147,7 @@ func Upload(c *gin.Context) {
 		"public_url": publicURL,
 	}).Info("uploaded public image")
 
-	c.JSON(200, map[string]interface{}{
+	renderJSON(w, http.StatusOK, map[string]interface{}{
 		"status":     "ok",
 		"public_url": publicURL,
 	})

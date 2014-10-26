@@ -1,105 +1,94 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"os"
-	"strings"
-	"sync/atomic"
+	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
+	"github.com/zenazn/goji/web"
+	"github.com/zenazn/goji/web/middleware"
 )
 
 var (
-	idPrefix string
-	reqId    uint64
-
 	log = logrus.New()
 )
 
-func init() {
-	// Init. request ID stuff.
-	hostname, err := os.Hostname()
-	if hostname == "" || err != nil {
-		hostname = "localhost"
+func DurationToString(d time.Duration) string {
+	duration := d.Nanoseconds()
+
+	var units string
+	switch {
+	case d > 1*1000*1000*1000:
+		units = "s"
+		duration /= (1000 * 1000 * 1000)
+
+	case d > 2*1000*1000:
+		// Note: we picked 2 here so we get more granularity in the
+		// microsecond range
+		units = "ms"
+		duration /= (1000 * 1000)
+
+	case d > 1*1000:
+		units = "μs"
+		duration /= 1000
+
+	default:
+		units = "ns"
 	}
 
-	var buf [12]byte
-	var b64 string
-	for len(b64) < 10 {
-		rand.Read(buf[:])
-		b64 = base64.StdEncoding.EncodeToString(buf[:])
-		b64 = strings.NewReplacer("+", "", "/", "").Replace(b64)
-	}
-
-	idPrefix = fmt.Sprintf("%s/%s", hostname, b64[0:10])
+	return fmt.Sprintf("%d%s", duration, units)
 }
 
-// Generate a unique request ID for each request.  Borrowed liberally from Goji.
-func RequestIdMiddleware(c *gin.Context) {
-	myId := atomic.AddUint64(&reqId, 1)
-	c.Set("requestId", fmt.Sprintf("%s-%06d", idPrefix, myId))
-	c.Next()
+func logMiddleware(c *web.C, h http.Handler) http.Handler {
+	ret := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.WithFields(logrus.Fields{
+			"id":     middleware.GetReqID(*c),
+			"uri":    r.RequestURI,
+			"method": r.Method,
+			"remote": r.RemoteAddr,
+		}).Info("request started")
+
+		wrapped := wrapWriter(w)
+
+		start := time.Now()
+		h.ServeHTTP(wrapped, r)
+		wrapped.maybeWriteHeader()
+		duration := time.Now().Sub(start)
+
+		log.WithFields(logrus.Fields{
+			"id":       middleware.GetReqID(*c),
+			"uri":      r.RequestURI,
+			"method":   r.Method,
+			"remote":   r.RemoteAddr,
+			"status":   wrapped.status(),
+			"duration": duration.Nanoseconds(),
+			"size":     wrapped.written(),
+		}).Infof("request finished in %s", DurationToString(duration))
+	})
+	return ret
 }
 
-func ErrorPrintMiddleware(c *gin.Context) {
-	c.Next()
+func recoverMiddleware(c *web.C, h http.Handler) http.Handler {
+	ret := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				buf := make([]byte, 1<<16)
+				amt := runtime.Stack(buf, false)
+				stack := string(buf[:amt])
 
-	// Exit if there's no errors.
-	if len(c.Errors) == 0 {
-		return
-	}
+				log.WithFields(logrus.Fields{
+					"err":   err,
+					"id":    middleware.GetReqID(*c),
+					"stack": stack,
+				}).Error("recovered from panic")
 
-	type ErrorDesc struct {
-		Error string      `json:"error,omitempty"`
-		Meta  interface{} `json:"message,omitempty"`
-	}
+				http.Error(w, http.StatusText(500), 500)
+			}
+		}()
 
-	errors := []ErrorDesc{}
-	for _, err := range c.Errors {
-		errors = append(errors, ErrorDesc{
-			Error: err.Err,
-			Meta:  err.Meta,
-		})
-	}
-
-	resp := map[string]interface{}{
-		"status": "error",
-		"errors": errors,
-	}
-
-	status := c.Writer.Status()
-	if status == 0 {
-		status = 500
-	}
-
-	c.JSON(status, resp)
-}
-
-func LogrusMiddleware(c *gin.Context) {
-	start := time.Now()
-	id := c.MustGet("requestId").(string)
-
-	log.WithFields(logrus.Fields{
-		"requestId": id,
-		"uri":       c.Request.RequestURI,
-		"method":    c.Request.Method,
-		"remote":    c.Request.RemoteAddr,
-	}).Info("request_start")
-
-	c.Next()
-
-	latency := float64(time.Since(start)) / float64(time.Millisecond)
-
-	log.WithFields(logrus.Fields{
-		"requestId": id,
-		"uri":       c.Request.RequestURI,
-		"method":    c.Request.Method,
-		"remote":    c.Request.RemoteAddr,
-		"status":    c.Writer.Status(),
-		"latency":   latency,
-	}).Info("request_finished")
+		h.ServeHTTP(w, r)
+	})
+	return ret
 }

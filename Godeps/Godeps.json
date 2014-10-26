@@ -16,6 +16,11 @@
 			"Rev": "e492ffa4cad4d945baf6c597b52a306618e6f80a"
 		},
 		{
+			"ImportPath": "code.google.com/p/go.net/netutil",
+			"Comment": "null-164",
+			"Rev": "6122c8c304675f19800c917359e02dd68e760a5b"
+		},
+		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.5.1-35-g2e36101",
 			"Rev": "2e36101a197f56f60ca6c37c3c256ed3713a9649"
@@ -25,13 +30,8 @@
 			"Rev": "9e67388aae65b9dc4e563beff827e19755deae6a"
 		},
 		{
-			"ImportPath": "github.com/gin-gonic/gin",
-			"Comment": "v0.4-8-g3b079bb",
-			"Rev": "3b079bb6f79ae501e73a5401c41b589f6616b61e"
-		},
-		{
-			"ImportPath": "github.com/julienschmidt/httprouter",
-			"Rev": "7deadb6844d2c6ff1dfb812eaa439b87cdaedf20"
+			"ImportPath": "github.com/goji/httpauth",
+			"Rev": "5279c8de0d24f35f88205340317b30b31084892c"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/goamz/aws",
@@ -54,12 +54,24 @@
 			"Rev": "eb2943811adc24a1a40d6dc0525995d4f8563d08"
 		},
 		{
+			"ImportPath": "github.com/stretchr/graceful",
+			"Rev": "0b67b304c1354aa3d1b2c4353a630ee0f589c34f"
+		},
+		{
+			"ImportPath": "github.com/stretchr/pat/stop",
+			"Rev": "f7fe051f2b9bcaca162b38de4f93c9a8457160b9"
+		},
+		{
 			"ImportPath": "github.com/stretchr/testify/assert",
 			"Rev": "d6577e08ec30538639ac0ea38b562b6f250e9055"
 		},
 		{
 			"ImportPath": "github.com/vaughan0/go-ini",
 			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
+		},
+		{
+			"ImportPath": "github.com/zenazn/goji/web",
+			"Rev": "04b25f26e54f4b42c26d746eb83ab8b41e7dd272"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v1",

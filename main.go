@@ -3,13 +3,18 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
+	"github.com/goji/httpauth"
 	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
 	flag "github.com/ogier/pflag"
+	"github.com/stretchr/graceful"
+	"github.com/zenazn/goji/web"
+	"github.com/zenazn/goji/web/middleware"
 	"gopkg.in/yaml.v1"
 )
 
@@ -86,7 +91,6 @@ func validateConfig(config *Config) error {
 
 func main() {
 	flag.Parse()
-	gin.SetMode(gin.ReleaseMode)
 
 	var config Config
 
@@ -116,34 +120,41 @@ func main() {
 	}
 	client := s3.New(auth, aws.Regions[config.AWSAuth.Region])
 
-	// Authorized accounts
-	accounts := gin.Accounts{}
-	accounts[config.Auth.Username] = config.Auth.Password
+	// Authorization
+	authOpts := httpauth.AuthOptions{
+		Realm:    "ImageHost",
+		User:     config.Auth.Username,
+		Password: config.Auth.Password,
+	}
 
-	r := gin.New()
-	r.Use(RequestIdMiddleware)
-	r.Use(LogrusMiddleware)
+	m := web.New()
+	m.Use(middleware.RequestID)
+	m.Use(logMiddleware)
+	m.Use(recoverMiddleware)
+	m.Use(middleware.AutomaticOptions)
 
 	// Inject our config and S3 instance into each request.
-	r.Use(func(c *gin.Context) {
-		c.Set("client", client)
-		c.Set("config", &config)
-		c.Next()
+	m.Use(func(c *web.C, h http.Handler) http.Handler {
+		ret := func(w http.ResponseWriter, r *http.Request) {
+			c.Env["client"] = client
+			c.Env["config"] = &config
+
+			h.ServeHTTP(w, r)
+		}
+		return http.HandlerFunc(ret)
 	})
 
-	// Handle errors by writing them as JSON.
-	r.Use(ErrorPrintMiddleware)
-
 	// Set up actual routes.
-	r.GET("/", Index)
+	m.Get("/", Index)
 
-	authorized := r.Group("/", gin.BasicAuth(accounts))
-	{
-		authorized.POST("/upload", Upload)
-	}
+	authorized := web.New()
+	authorized.Use(httpauth.BasicAuth(authOpts))
+	authorized.Post("/upload", Upload)
+	m.Handle("/*", authorized)
 
 	// Good to go!
 	addr := fmt.Sprintf(":%d", flagPort)
-	log.Printf("Starting HTTP server on %s", addr)
-	r.Run(":8080")
+	log.Infof("Starting HTTP server on %s", addr)
+	graceful.Run(addr, 10*time.Second, m)
+	log.Infof("Finished")
 }

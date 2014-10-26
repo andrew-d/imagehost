@@ -12,10 +12,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var _ = fmt.Println
+
 func TestImageOrientation(t *testing.T) {
-	for i := 1; i <= 8; i++ {
-		fname := fmt.Sprintf("Landscape_%d.jpg", i)
-		f, err := os.Open(path.Join("exif-orientation-examples", fname))
+	const TEST_DIR = "exif-orientation-examples"
+
+	testDir, err := os.Open(TEST_DIR)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer testDir.Close()
+
+	names, err := testDir.Readdir(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, fi := range names {
+		if !fi.Mode().IsRegular() {
+			continue
+		}
+
+		fname := fi.Name()
+		fmt.Println("current image:", fname)
+
+		f, err := os.Open(path.Join(TEST_DIR, fname))
 		assert.NoError(t, err)
 		defer f.Close()
 

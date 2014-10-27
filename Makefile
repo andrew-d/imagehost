@@ -27,6 +27,7 @@ NOCOLOR := \e[0m
 
 EMBED_FILES :=  $(shell find frontend/ -name '*.tmpl') \
 				$(shell find frontend/css -name '*.css') \
+				$(shell find frontend/js -name '*.js') \
 				$(shell find frontend/fonts -type f)
 BUILD_FILES  := $(patsubst frontend/%,build/%,$(EMBED_FILES))
 

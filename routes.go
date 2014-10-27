@@ -12,7 +12,7 @@ import (
 )
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("This is the main page"))
+	renderTemplate(w, "index", M{})
 }
 
 func Upload(c web.C, w http.ResponseWriter, r *http.Request) {

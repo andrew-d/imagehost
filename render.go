@@ -1,5 +1,8 @@
 package main
 
+// This file contains functions to do with rendering non-template data to a
+// http.ResponseWriter (e.g. JSON, errors, etc.)
+
 import (
 	"encoding/json"
 	"net/http"
@@ -7,10 +10,9 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-var (
-	badJson = []byte(`{"status":"error","error":"error marshalling to json",` +
-		`"meta":"internal error while marshalling to json"}`)
-)
+// Static data to send when we can't convert to JSON
+var badJson = []byte(`{"status":"error","error":"error marshalling to json",` +
+	`"meta":"internal error while marshalling to json"}`)
 
 func renderJSON(w http.ResponseWriter, code int, data interface{}) {
 	var result []byte

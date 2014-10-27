@@ -46,6 +46,10 @@
 			"Rev": "e4f7d00f344b0954fa3791a8527d10ba7334eceb"
 		},
 		{
+			"ImportPath": "github.com/oxtoacart/bpool",
+			"Rev": "0f78ff9152c03745d1a47c9023af1b424e202c07"
+		},
+		{
 			"ImportPath": "github.com/rwcarlsen/goexif/exif",
 			"Rev": "eb2943811adc24a1a40d6dc0525995d4f8563d08"
 		},

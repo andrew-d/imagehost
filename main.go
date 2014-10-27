@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -147,6 +148,15 @@ func main() {
 	// Set up actual routes.
 	m.Get("/", Index)
 
+	// Static assets
+	for _, asset := range AssetDescriptors() {
+		if !strings.HasSuffix(asset.Path, ".tmpl") {
+			log.Printf("Serving asset: %s", asset.Path)
+			m.Get("/"+asset.Path, ServeAsset(asset.Path, asset.Mime))
+		}
+	}
+
+	// These require authorization
 	authorized := web.New()
 	authorized.Use(httpauth.BasicAuth(authOpts))
 	authorized.Post("/upload", Upload)

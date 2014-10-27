@@ -1,0 +1,23 @@
+{{ define "title" }}imagehost{{ end }}
+
+{{ define "content" }}
+    <div class="jumbotron">
+        <h1>Image Hosting</h1>
+        <p class="lead">
+			This site allows you to upload and store images.
+        </p>
+    </div>
+
+	<div class="row">
+		<div class="col-xs-12">
+			<form role="form" action="/upload" method="POST" enctype="multipart/form-data">
+				<div class="form-group">
+					<label for="fileUpload">Select an image</label>
+					<input type="file" id="fileUpload" name="upload">
+				</div>
+
+				<button type="submit" class="btn btn-primary">Upload</button>
+			</form>
+		</div>
+	</div>
+{{ end }}

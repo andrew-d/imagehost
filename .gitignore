@@ -1,1 +1,8 @@
 prod.config.yaml
+
+# The built executable
+/imagehost
+
+# Generated files
+resources.go
+descriptors.go

@@ -2,7 +2,9 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
 	"io"
+	"net/http"
 )
 
 // Note: slightly biased towards first 8 characters of the alphabet, since 255
@@ -32,4 +34,20 @@ func getSize(s io.Seeker) (size int64, err error) {
 
 	_, err = s.Seek(0, 0)
 	return
+}
+
+func ServeAsset(name, mime string) http.Handler {
+	// Assert that the asset exists.
+	_, err := Asset(name)
+	if err != nil {
+		panic(fmt.Sprintf("asset named '%s' does not exist", name))
+	}
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		asset, _ := Asset(name)
+		w.Header().Set("Content-Type", mime)
+		w.Write(asset)
+	}
+
+	return http.HandlerFunc(handler)
 }

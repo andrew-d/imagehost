@@ -83,6 +83,11 @@ dependencies:
 	@command -v go-bindata >/dev/null 2>&1 || { printf >&2 "go-bindata is not installed, exiting...\n"; exit 1; }
 	@command -v godep      >/dev/null 2>&1 || { printf >&2 "godep is not installed, exiting...\n"; exit 1; }
 
+.PHONY: update-deps
+update-deps:
+	@go get -u github.com/jteeuwen/go-bindata
+	@go get -u github.com/tools/godep
+
 ######################################################################
 
 .PHONY: clean

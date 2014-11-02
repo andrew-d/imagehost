@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	// We depend on this as a dummy, so Godep will vendor the go-bindata source.
+	_ "github.com/jteeuwen/go-bindata"
 )
 
 // Note: slightly biased towards first 8 characters of the alphabet, since 255

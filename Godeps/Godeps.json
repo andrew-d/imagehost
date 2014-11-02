@@ -34,6 +34,11 @@
 			"Rev": "5279c8de0d24f35f88205340317b30b31084892c"
 		},
 		{
+			"ImportPath": "github.com/jteeuwen/go-bindata",
+			"Comment": "v3.0.5-31-g93b909d",
+			"Rev": "93b909d1499a38620121b0a5eb43a18f3bccb083"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/goamz/aws",
 			"Rev": "7423bca18e4b1a3e91dff9f41b80c167f5609237"
 		},

@@ -51,13 +51,17 @@ descriptors.go: $(RESOURCES)
 		--prefix "build/" \
 		$(RESOURCES) > $@
 
-resources.go: $(RESOURCES)
+resources.go: $(RESOURCES) build/go-bindata
 	@printf "  $(GREEN)BINDATA$(NOCOLOR)  $@\n"
-	$(CMD_PREFIX)go-bindata \
+	$(CMD_PREFIX)build/go-bindata \
 		-ignore='^.*(\.gitignore|imagehost)$$' \
 		-prefix "./build" \
 		-o $@ \
-		$(sort $(dir $^))
+		$(sort $(dir $(RESOURCES)))
+
+build/go-bindata:
+	@printf "  $(GREEN)DEPS(B)$(NOCOLOR)  $@\n"
+	$(CMD_PREFIX)godep go build -o $@ github.com/jteeuwen/go-bindata/go-bindata
 
 ######################################################################
 
@@ -80,13 +84,12 @@ build/fonts/%: frontend/fonts/%
 # This is a phony target that checks to ensure our various dependencies are installed
 .PHONY: dependencies
 dependencies:
-	@command -v go-bindata >/dev/null 2>&1 || { printf >&2 "go-bindata is not installed, exiting...\n"; exit 1; }
 	@command -v godep      >/dev/null 2>&1 || { printf >&2 "godep is not installed, exiting...\n"; exit 1; }
 
 ######################################################################
 
 .PHONY: clean
-CLEAN_FILES := build/imagehost resources.go descriptors.go $(RESOURCES)
+CLEAN_FILES := build/imagehost build/go-bindata resources.go descriptors.go $(RESOURCES)
 clean:
 	@printf "  $(YELLOW)RM$(NOCOLOR)       $(CLEAN_FILES)\n"
 	$(CMD_PREFIX)$(RM) -r $(CLEAN_FILES)

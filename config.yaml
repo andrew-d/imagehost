@@ -11,6 +11,9 @@ archive_bucket: s00persekret
 # This value is required.
 public_bucket: mybucket
 
+# The JPEG compression to use.  By default, this value is set to 80 (i.e. 80%).
+jpeg_compression: 80
+
 # Authentication and configuration for AWS.
 # 'access_key' and 'secret_key' are required.
 aws:

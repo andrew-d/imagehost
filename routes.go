@@ -72,7 +72,7 @@ func Upload(c web.C, w http.ResponseWriter, r *http.Request) {
 
 	// Sanitize the image.
 	// TODO: add support for animated GIFs
-	sanitized, size, err := SanitizeImageFrom(f)
+	sanitized, size, err := SanitizeImageFrom(f, config.JPEGCompression)
 	if err != nil {
 		renderError(w, http.StatusInternalServerError, err.Error(), "error sanitizing image")
 		return

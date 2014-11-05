@@ -27,7 +27,8 @@ func checkImage(r io.ReadSeeker) (string, bool) {
 	return fmt, true
 }
 
-func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
+// Note: comp is used for JSON compression
+func SanitizeImageFrom(r io.ReadSeeker, comp int) (io.ReadSeeker, int64, error) {
 	img, format, err := image.Decode(r)
 	if err != nil {
 		return nil, 0, err
@@ -81,7 +82,7 @@ func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
 	case "gif":
 		err = gif.Encode(&buf, newImg, &gif.Options{NumColors: 256})
 	case "jpeg":
-		err = jpeg.Encode(&buf, newImg, &jpeg.Options{Quality: 100})
+		err = jpeg.Encode(&buf, newImg, &jpeg.Options{Quality: comp})
 	case "png":
 		err = png.Encode(&buf, newImg)
 	default:

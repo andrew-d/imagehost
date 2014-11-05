@@ -20,8 +20,9 @@ import (
 )
 
 type Config struct {
-	PublicBucket  string `yaml:"public_bucket"`
-	ArchiveBucket string `yaml:"archive_bucket"`
+	PublicBucket    string `yaml:"public_bucket"`
+	ArchiveBucket   string `yaml:"archive_bucket"`
+	JPEGCompression int    `yaml:"jpeg_compression"`
 
 	AWSAuth struct {
 		AccessKey string `yaml:"access_key"`
@@ -74,6 +75,9 @@ func loadConfig(out *Config) error {
 func validateConfig(config *Config) error {
 	if len(config.PublicBucket) == 0 {
 		return fmt.Errorf("No public bucket given")
+	}
+	if config.JPEGCompression == 0 {
+		config.JPEGCompression = 80
 	}
 	if len(config.AWSAuth.AccessKey) == 0 || len(config.AWSAuth.SecretKey) == 0 {
 		return fmt.Errorf("AWS configuration not given")

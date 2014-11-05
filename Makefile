@@ -16,9 +16,14 @@ TYPE ?= debug
 # to a minimum.  In debug mode, we also always load the assets from disk.
 ifeq ($(TYPE),release)
 export ASSET_FLAGS   :=
+export BINDATA_FLAGS :=
+export GO_FLAGS      := -tags 'prod'
 else
 export ASSET_FLAGS   := --debug
+export BINDATA_FLAGS := -debug
+export GO_FLAGS      :=
 endif
+
 
 RED     := \e[0;31m
 GREEN   := \e[0;32m
@@ -42,7 +47,7 @@ all: dependencies build/imagehost
 
 build/imagehost: descriptors.go resources.go *.go
 	@printf "  $(GREEN)GO$(NOCOLOR)       $@\n"
-	$(CMD_PREFIX)godep go build -o $@ .
+	$(CMD_PREFIX)godep go build $(GO_FLAGS) -o $@ .
 
 descriptors.go: $(RESOURCES)
 	@printf "  $(GREEN)ASSETS$(NOCOLOR)   $@\n"
@@ -55,6 +60,7 @@ resources.go: $(RESOURCES) build/go-bindata
 	@printf "  $(GREEN)BINDATA$(NOCOLOR)  $@\n"
 	$(CMD_PREFIX)build/go-bindata \
 		-ignore='^.*(\.gitignore|imagehost)$$' \
+		$(BINDATA_FLAGS) \
 		-prefix "./build" \
 		-o $@ \
 		$(sort $(dir $(RESOURCES)))

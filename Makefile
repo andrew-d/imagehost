@@ -96,6 +96,10 @@ dependencies:
 update-deps:
 	@go get -u github.com/tools/godep
 
+.PHONY: test
+test:
+	@godep go test -v .
+
 ######################################################################
 
 .PHONY: clean

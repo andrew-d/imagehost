@@ -34,7 +34,7 @@ func TestImageOrientation(t *testing.T) {
 		}
 
 		fname := fi.Name()
-		fmt.Println("current image:", fname)
+		log.Infof("current image: %s", fname)
 
 		f, err := os.Open(path.Join(TEST_DIR, fname))
 		assert.NoError(t, err)

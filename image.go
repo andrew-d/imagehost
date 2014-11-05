@@ -36,7 +36,10 @@ func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
 	var orientation *tiff.Tag
 	var ex *exif.Exif
 
-	if format == "jpeg" {
+	_, err = r.Seek(0, 0)
+	if err != nil {
+		log.WithField("err", err).Error("Cannot rewind image to parse EXIF")
+	} else if format == "jpeg" {
 		ex, err = parseExif(r)
 
 		canContinue := true
@@ -57,7 +60,7 @@ func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
 			orientation, err = ex.Get(exif.Orientation)
 			if err != nil && !exif.IsTagNotPresentError(err) {
 				log.WithFields(logrus.Fields{
-					"error": "err",
+					"error": err,
 				}).Warn("Could not get Orientation tag")
 			}
 		}

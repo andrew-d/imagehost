@@ -66,3 +66,38 @@ func TestImageOrientation(t *testing.T) {
 		_ = newImg
 	}
 }
+
+func TestImageCompression(t *testing.T) {
+	const TEST_FILE = "exif-orientation-examples/compression-test.jpg"
+
+	f, err := os.Open(path.Join(TEST_FILE))
+	assert.NoError(t, err)
+	defer f.Close()
+
+	img, _, err := image.Decode(f)
+	assert.NoError(t, err)
+
+	newImg := CloneToRGBA(img)
+
+	_, err = f.Seek(0, 0)
+	assert.NoError(t, err)
+
+	ex, err := parseExif(f)
+	assert.NoError(t, err)
+
+	orientation, err := ex.Get(exif.Orientation)
+	assert.NoError(t, err)
+
+	newImg, err = fixOrientation(newImg, orientation, ex.Tiff.Order)
+	assert.NoError(t, err)
+
+	for i := 100; i > 20; i -= 5 {
+		log.Infof("current quality: %d", i)
+
+		outFile, err := os.Create(path.Join("exif-orientation-processed", fmt.Sprintf("quality-%d.jpg", i)))
+		assert.NoError(t, err)
+
+		err = jpeg.Encode(outFile, newImg, &jpeg.Options{Quality: i})
+		assert.NoError(t, err)
+	}
+}

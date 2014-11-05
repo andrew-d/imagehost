@@ -38,17 +38,28 @@ func SanitizeImageFrom(r io.ReadSeeker) (io.ReadSeeker, int64, error) {
 
 	if format == "jpeg" {
 		ex, err = parseExif(r)
-		if err == nil {
+
+		canContinue := true
+		if err != nil {
+			if exif.IsCriticalError(err) {
+				log.WithFields(logrus.Fields{
+					"error": err,
+				}).Error("Could not parse EXIF data from image")
+				canContinue = false
+			} else {
+				log.WithFields(logrus.Fields{
+					"error": err,
+				}).Warn("Non-fatal error when parsing EXIF data")
+			}
+		}
+
+		if canContinue {
 			orientation, err = ex.Get(exif.Orientation)
 			if err != nil && !exif.IsTagNotPresentError(err) {
 				log.WithFields(logrus.Fields{
 					"error": "err",
 				}).Warn("Could not get Orientation tag")
 			}
-		} else {
-			log.WithFields(logrus.Fields{
-				"error": err,
-			}).Warn("Could not parse EXIF data from image")
 		}
 	}
 

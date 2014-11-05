@@ -17,13 +17,13 @@
 		},
 		{
 			"ImportPath": "code.google.com/p/go.net/netutil",
-			"Comment": "null-164",
-			"Rev": "6122c8c304675f19800c917359e02dd68e760a5b"
+			"Comment": "null-174",
+			"Rev": "4ae9fa0d02915d8ecab034965ac28b6bf86fbbb5"
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.5.1-35-g2e36101",
-			"Rev": "2e36101a197f56f60ca6c37c3c256ed3713a9649"
+			"Comment": "v0.6.0",
+			"Rev": "6ebb4e7b3c24b9fef150d7693e728cb1ebadf1f5"
 		},
 		{
 			"ImportPath": "github.com/disintegration/imaging",
@@ -56,11 +56,11 @@
 		},
 		{
 			"ImportPath": "github.com/rwcarlsen/goexif/exif",
-			"Rev": "eb2943811adc24a1a40d6dc0525995d4f8563d08"
+			"Rev": "9fb3b23c1aaada5775178242884b75d4f4a330d3"
 		},
 		{
 			"ImportPath": "github.com/rwcarlsen/goexif/tiff",
-			"Rev": "eb2943811adc24a1a40d6dc0525995d4f8563d08"
+			"Rev": "9fb3b23c1aaada5775178242884b75d4f4a330d3"
 		},
 		{
 			"ImportPath": "github.com/stretchr/graceful",
@@ -80,7 +80,8 @@
 		},
 		{
 			"ImportPath": "github.com/zenazn/goji/web",
-			"Rev": "04b25f26e54f4b42c26d746eb83ab8b41e7dd272"
+			"Comment": "v0.8.1-2-g709dbfa",
+			"Rev": "709dbfa7bd7cfa5a2174cc96da25c1a2030b972f"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v1",

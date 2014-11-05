@@ -35,11 +35,14 @@ and handler. Pattern must be one of the following types:
 		- a path segment starting with with a colon will match any
 		  string placed at that position. e.g., "/:name" will match
 		  "/carl", binding "name" to "carl".
-		- a pattern ending with an asterisk will match any prefix of
-		  that route. For instance, "/admin/*" will match "/admin/" and
-		  "/admin/secret/lair". This is similar to Sinatra's wildcard,
-		  but may only appear at the very end of the string and is
-		  therefore significantly less powerful.
+		- a pattern ending with "/*" will match any route with that
+		  prefix. For instance, the pattern "/u/:name/*" will match
+		  "/u/carl/" and "/u/carl/projects/123", but not "/u/carl"
+		  (because there is no trailing slash). In addition to any names
+		  bound in the pattern, the special name "*" is bound to the
+		  unmatched tail of the match, but including the leading "/". So
+		  for the two matching examples above, "*" would be bound to "/"
+		  and "/projects/123" respectively.
 	- regexp.Regexp. The library assumes that it is a Perl-style regexp that
 	  is anchored on the left (i.e., the beginning of the string). If your
 	  regexp is not anchored on the left, a hopefully-identical
@@ -52,36 +55,174 @@ Handler must be one of the following types:
 	- func(c web.C, w http.ResponseWriter, r *http.Request)
 */
 type Mux struct {
-	mStack
-	router
+	ms mStack
+	rt router
 }
 
 // New creates a new Mux without any routes or middleware.
 func New() *Mux {
 	mux := Mux{
-		mStack: mStack{
+		ms: mStack{
 			stack: make([]mLayer, 0),
 			pool:  makeCPool(),
 		},
-		router: router{
+		rt: router{
 			routes:   make([]route, 0),
 			notFound: parseHandler(http.NotFound),
 		},
 	}
-	mux.mStack.router = &mux.router
+	mux.ms.router = &mux.rt
 	return &mux
 }
 
+// ServeHTTP processes HTTP requests. It make Muxes satisfy net/http.Handler.
 func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	stack := m.mStack.alloc()
+	stack := m.ms.alloc()
 	stack.ServeHTTP(w, r)
-	m.mStack.release(stack)
+	m.ms.release(stack)
 }
 
 // ServeHTTPC creates a context dependent request with the given Mux. Satisfies
 // the web.Handler interface.
 func (m *Mux) ServeHTTPC(c C, w http.ResponseWriter, r *http.Request) {
-	stack := m.mStack.alloc()
+	stack := m.ms.alloc()
 	stack.ServeHTTPC(c, w, r)
-	m.mStack.release(stack)
+	m.ms.release(stack)
+}
+
+// Middleware Stack functions
+
+// Append the given middleware to the middleware stack. See the documentation
+// for type Mux for a list of valid middleware types.
+//
+// No attempt is made to enforce the uniqueness of middlewares. It is illegal to
+// call this function concurrently with active requests.
+func (m *Mux) Use(middleware interface{}) {
+	m.ms.Use(middleware)
+}
+
+// Insert the given middleware immediately before a given existing middleware in
+// the stack. See the documentation for type Mux for a list of valid middleware
+// types. Returns an error if no middleware has the name given by "before."
+//
+// No attempt is made to enforce the uniqueness of middlewares. If the insertion
+// point is ambiguous, the first (outermost) one is chosen. It is illegal to
+// call this function concurrently with active requests.
+func (m *Mux) Insert(middleware, before interface{}) error {
+	return m.ms.Insert(middleware, before)
+}
+
+// Remove the given middleware from the middleware stack. Returns an error if
+// no such middleware can be found.
+//
+// If the name of the middleware to delete is ambiguous, the first (outermost)
+// one is chosen. It is illegal to call this function concurrently with active
+// requests.
+func (m *Mux) Abandon(middleware interface{}) error {
+	return m.ms.Abandon(middleware)
+}
+
+// Router functions
+
+/*
+Dispatch to the given handler when the pattern matches, regardless of HTTP
+method. See the documentation for type Mux for a description of what types are
+accepted for pattern and handler.
+
+This method is commonly used to implement sub-routing: an admin application, for
+instance, can expose a single handler that is attached to the main Mux by
+calling Handle("/admin*", adminHandler) or similar. Note that this function
+doesn't strip this prefix from the path before forwarding it on (e.g., the
+handler will see the full path, including the "/admin" part), but this
+functionality can easily be performed by an extra middleware layer.
+*/
+func (m *Mux) Handle(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mALL, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// CONNECT. See the documentation for type Mux for a description of what types
+// are accepted for pattern and handler.
+func (m *Mux) Connect(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mCONNECT, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// DELETE. See the documentation for type Mux for a description of what types
+// are accepted for pattern and handler.
+func (m *Mux) Delete(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mDELETE, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// GET. See the documentation for type Mux for a description of what types are
+// accepted for pattern and handler.
+//
+// All GET handlers also transparently serve HEAD requests, since net/http will
+// take care of all the fiddly bits for you. If you wish to provide an alternate
+// implementation of HEAD, you should add a handler explicitly and place it
+// above your GET handler.
+func (m *Mux) Get(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mGET|mHEAD, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// HEAD. See the documentation for type Mux for a description of what types are
+// accepted for pattern and handler.
+func (m *Mux) Head(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mHEAD, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// OPTIONS. See the documentation for type Mux for a description of what types
+// are accepted for pattern and handler.
+func (m *Mux) Options(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mOPTIONS, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// PATCH. See the documentation for type Mux for a description of what types are
+// accepted for pattern and handler.
+func (m *Mux) Patch(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mPATCH, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// POST. See the documentation for type Mux for a description of what types are
+// accepted for pattern and handler.
+func (m *Mux) Post(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mPOST, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// PUT. See the documentation for type Mux for a description of what types are
+// accepted for pattern and handler.
+func (m *Mux) Put(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mPUT, handler)
+}
+
+// Dispatch to the given handler when the pattern matches and the HTTP method is
+// TRACE. See the documentation for type Mux for a description of what types are
+// accepted for pattern and handler.
+func (m *Mux) Trace(pattern interface{}, handler interface{}) {
+	m.rt.handleUntyped(pattern, mTRACE, handler)
+}
+
+// Set the fallback (i.e., 404) handler for this mux. See the documentation for
+// type Mux for a description of what types are accepted for handler.
+//
+// As a convenience, the context environment variable "goji.web.validMethods"
+// (also available as the constant ValidMethodsKey) will be set to the list of
+// HTTP methods that could have been routed had they been provided on an
+// otherwise identical request.
+func (m *Mux) NotFound(handler interface{}) {
+	m.rt.notFound = parseHandler(handler)
+}
+
+// Compile the list of routes into bytecode. This only needs to be done once
+// after all the routes have been added, and will be called automatically for
+// you (at some performance cost on the first request) if you do not call it
+// explicitly.
+func (m *Mux) Compile() {
+	m.rt.compile()
 }

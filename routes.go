@@ -11,8 +11,12 @@ import (
 	"github.com/zenazn/goji/web"
 )
 
-func Index(w http.ResponseWriter, r *http.Request) {
-	renderTemplate(w, "index", M{})
+func Index(c web.C, w http.ResponseWriter, r *http.Request) {
+	config := c.Env["config"].(*Config)
+
+	renderTemplate(w, "index", M{
+		"baseUrl": config.BaseURL,
+	})
 }
 
 func Upload(c web.C, w http.ResponseWriter, r *http.Request) {

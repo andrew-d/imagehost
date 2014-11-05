@@ -14,6 +14,10 @@ public_bucket: mybucket
 # The JPEG compression to use.  By default, this value is set to 80 (i.e. 80%).
 jpeg_compression: 80
 
+# Base URL to serve the web interface from.  Should end with a slash ("/").
+# If not given, defaults to "/"
+base_url: "/"
+
 # Authentication and configuration for AWS.
 # 'access_key' and 'secret_key' are required.
 aws:

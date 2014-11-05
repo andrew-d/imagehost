@@ -23,6 +23,7 @@ type Config struct {
 	PublicBucket    string `yaml:"public_bucket"`
 	ArchiveBucket   string `yaml:"archive_bucket"`
 	JPEGCompression int    `yaml:"jpeg_compression"`
+	BaseURL         string `yaml:"base_url"`
 
 	AWSAuth struct {
 		AccessKey string `yaml:"access_key"`
@@ -78,6 +79,9 @@ func validateConfig(config *Config) error {
 	}
 	if config.JPEGCompression == 0 {
 		config.JPEGCompression = 80
+	}
+	if len(config.BaseURL) == 0 {
+		config.BaseURL = "/"
 	}
 	if len(config.AWSAuth.AccessKey) == 0 || len(config.AWSAuth.SecretKey) == 0 {
 		return fmt.Errorf("AWS configuration not given")
